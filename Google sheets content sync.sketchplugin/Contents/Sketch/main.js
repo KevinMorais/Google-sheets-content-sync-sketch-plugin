@@ -62,31 +62,39 @@ function updateSheetURL() {
   return showOptions() == '1000'
 }
 
+function showAlert(title, text) {
+  var alert = NSAlert.alloc().init()
+    alert.setIcon(iconImage)
+    alert.setMessageText(title)
+    alert.setInformativeText(text)
+    alert.addButtonWithTitle("Ok")
+    alert.runModal()
+}
+
 // The actual work!!
 // Fetch the content from the Sheets URL
 // Update the values accordingly
 function syncContent() {
 
   print('Importing content from: ' + url)
-
   // If the user didn't enter a valid URL, tell them, then exit
   var sheetId = validateURL()
 
   if (!sheetId) {
     var alert = NSAlert.alloc().init()
     alert.setIcon(iconImage)
-  	alert.setMessageText("Invalid Google Sheet URL")
-  	alert.setInformativeText("The URL you entered wasn't valid")
-  	alert.addButtonWithTitle("Ok")
+    alert.setMessageText("Invalid Google Sheet URL")
+    alert.setInformativeText("The URL you entered wasn't valid")
+    alert.addButtonWithTitle("Ok")
     return alert.runModal()
 
   } else if (sheetId == "e") {
 
     var alert = NSAlert.alloc().init()
     alert.setIcon(iconImage)
-  	alert.setMessageText("Invalid Google Sheet URL")
-  	alert.setInformativeText("It looks like you've used the URL generated on the 'Publish to the web' screen. \n\nWhilst it is important that you do 'publish' the spreadsheet to the web, you need to use the URL for the spreadsheet that is in the browser address bar instead.")
-  	alert.addButtonWithTitle("Ok")
+    alert.setMessageText("Invalid Google Sheet URL")
+    alert.setInformativeText("It looks like you've used the URL generated on the 'Publish to the web' screen. \n\nWhilst it is important that you do 'publish' the spreadsheet to the web, you need to use the URL for the spreadsheet that is in the browser address bar instead.")
+    alert.addButtonWithTitle("Ok")
     return alert.runModal()
   }
 
@@ -109,23 +117,23 @@ function syncContent() {
     }
 
     page.children().forEach(function(child) {
+
       if (child.isMemberOfClass(MSSymbolInstance)) {
 
         // Store new overrides that need to be made
         var overrides = {}
 
-
         child.symbolMaster().children().forEach(function(symbolLayer) {
           // Ignore layers that are not text layers or shapes
           // Only include layers that have a '#' in the name
-          if (!(symbolLayer.isMemberOfClass(MSTextLayer) || symbolLayer.isMemberOfClass(MSShapeGroup)) || symbolLayer.name().indexOf('#') < 0) {
+          if (!(symbolLayer.isMemberOfClass(MSTextLayer) || symbolLayer.isMemberOfClass(MSShapeGroup) || symbolLayer.isMemberOfClass(MSBitmapLayer)) || symbolLayer.name().indexOf('#') < 0) {
             return
           }
 
 
           var objectID = symbolLayer.objectID().toString()
           var existingOverrides = child.overrides()
-          if (existingOverrides == null) {
+          if (existingOverrides == null) { 
             // no overrides exist, add one
             child.overrides = { objectID : "overrideText"}
             existingOverrides = child.overrides()
@@ -166,13 +174,12 @@ function syncContent() {
           if (symbolLayer.isMemberOfClass(MSTextLayer)) {
             mutableOverrides.setObject_forKey(textValue, objectID)
 
-          } else if (symbolLayer.isMemberOfClass(MSShapeGroup)) {
+          } else if (symbolLayer.isMemberOfClass(MSShapeGroup) || symbolLayer.isMemberOfClass(MSBitmapLayer)) {
             var imageURL = imageURLFromValue(value)
             if (imageURL) {
               var imageData = getImageDataFromURL(imageURL)
               mutableOverrides.setObject_forKey(imageData, objectID)
             }
-
           }
 
           child.overrides = mutableOverrides
@@ -251,14 +258,13 @@ function imageURLFromValue(value) {
     return null
   }
 
-  var regex = /(https?:\/\/.*\.(?:png|jpg|jpeg))/i
+  var regex = /\/\/.*\.(?:png|jpg|jpeg)/i
   var matches = regex.exec(value)
   return (matches && matches.length > 1) ? matches[1] : null
 }
 
 // Downloads an image from a URL and returns it as a NSImageData
 function getImageDataFromURL(url) {
-
   var request = NSURLRequest.requestWithURL(NSURL.URLWithString(url))
   var data = NSURLConnection.sendSynchronousRequest_returningResponse_error(request, null, null)
 
